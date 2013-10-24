@@ -1,0 +1,46 @@
+# gerrit-trac-hooks configuration file
+#
+# there are three kind of sections:
+# 1. [hooks-settings] (hardcoded):
+# 	this section is used for some
+#	global settings
+# 2. [trac-default]   (hardcoded):
+# 	used if repo from incoming push
+#	is not found in any of the trac
+#	sections and "use_default" in
+#	[hook-settings] is set to True
+# 3. [NAME-OF-YOUR-CHOICE]:
+#	used for representing your trac
+#	projects.
+
+[hook-settings]
+# should [trac-default] be used for repos which
+# cannot be found in any of the trac section's
+# "repositories"-list? (Default: False)
+use_default = False
+
+# path to git (Default: /usr/bin/git)
+git_path = /usr/bin/git
+
+[trac-default]
+# path to your trac project folder
+trac_env = /var/trac/xxx
+
+[trac-x]
+trac_env = /var/trac/x
+
+repositories =	internal-repo-one
+		internal-repo-two
+
+[trac-xy]
+trac_env = /var/trac/xy
+repositories =	repo-one
+		repo-two
+		repo-three
+		repo-four
+
+[trac-xyz]
+trac_env = /var/trac/xyz
+repositories =	special-repo-one
+		special-repo-two
+

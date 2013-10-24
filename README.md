@@ -1,4 +1,7 @@
 gerrit-trac-hooks
-=================
+============
 
-This is a set of gerrit hooks to interact with trac
+master maybe doesn't work.
+have a look at the tags.
+
+enjoy!
