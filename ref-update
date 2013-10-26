@@ -16,7 +16,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+# MA  02110-1301, USA.
 
 import sys
 from optparse import OptionParser
@@ -24,11 +25,16 @@ from optparse import OptionParser
 from trac_update import TracGerritTicket
 
 parser = OptionParser()
-parser.add_option("-p", "--project", dest="project_name", help="Gerrit Project Name")
-parser.add_option("-r", "--refname", dest="refname", help="Git ref Name")
-parser.add_option("-u", "--uploader", dest="uploader", help="Gerrit Uploader")
-parser.add_option("-o", "--oldrev", dest="oldrev", help="GIT old rev")
-parser.add_option("-n", "--newrev", dest="newrev", help="GIT new rev")
+parser.add_option("-p", "--project", dest="project_name",
+    help="Gerrit Project Name")
+parser.add_option("-r", "--refname", dest="refname",
+    help="Git ref Name")
+parser.add_option("-u", "--uploader", dest="uploader",
+    help="Gerrit Uploader")
+parser.add_option("-o", "--oldrev", dest="oldrev",
+    help="GIT old rev")
+parser.add_option("-n", "--newrev", dest="newrev",
+    help="GIT new rev")
 
 options, args = parser.parse_args()
 

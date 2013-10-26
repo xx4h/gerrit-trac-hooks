@@ -16,7 +16,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+# MA  02110-1301, USA.
 
 import re
 import os
@@ -131,12 +132,15 @@ class TracGerritTicket():
 
         ## make sure PYTHON_EGG_CACHE is set
         if not 'PYTHON_EGG_CACHE' in os.environ:
-            os.environ['PYTHON_EGG_CACHE'] = self.config.get('hook-settings',
-                                                             'python_egg_cache')
+            os.environ['PYTHON_EGG_CACHE'] = self.config.\
+                                                get('hook-settings',
+                                                    'python_egg_cache')
 
     ## execute git commands via Popen via call_git
     def call_git(self, command, args, input=None):
-        return Popen([self.config.get('hook-settings', 'git_path'), command] + args, stdin=PIPE, stdout=PIPE).communicate(input)[0]
+        return Popen([self.config.get('hook-settings', 'git_path'),
+                      command] + args, stdin=PIPE,
+                      stdout=PIPE).communicate(input)[0]
 
     def check_for_ticket_reference(self):
         print "***** running ref-update hook..."
@@ -200,16 +204,26 @@ class TracGerritTicket():
     def trac_new_review(self):
         '''
         '''
-        if self.options.review or re.search("Patch Set \d+: -Code-Review\n", self.options.comment):
+        if self.options.review or re.search("Patch Set \d+: -Code-Review\n",
+                                            self.options.comment):
             if self.options.review and int(self.options.review) > 0:
-                change_url_line = "[%s Gerrit Review]\n\n" % self.options.change_url
-                comment_line = "[[span(style=color: green, %s\n\n" % self.options.comment.replace('\n', '\n> ').replace('\n', ')]]\n', 1)
+                change_url_line = "[%s Gerrit Review]\n\n" \
+                                    % self.options.change_url
+                comment_line = "[[span(style=color: green, %s\n\n" \
+                                % self.options.comment.replace('\n', '\n> ').\
+                                replace('\n', ')]]\n', 1)
             elif not self.options.review:
-                change_url_line = "[%s Gerrit Review]\n\n" % self.options.change_url
-                comment_line = "[[span(style=color: blue, %s\n\n" % self.options.comment.replace('\n', '\n> ').replace('\n', ')]]\n', 1)
+                change_url_line = "[%s Gerrit Review]\n\n" \
+                                   % self.options.change_url
+                comment_line = "[[span(style=color: blue, %s\n\n" \
+                                % self.options.comment.replace('\n', '\n> ').\
+                                replace('\n', ')]]\n', 1)
             else:
-                change_url_line = "[%s Gerrit Review]\n\n" % self.options.change_url
-                comment_line = "[[span(style=color: red, %s\n\n" % self.options.comment.replace('\n', '\n> ').replace('\n', ')]]\n', 1)
+                change_url_line = "[%s Gerrit Review]\n\n" \
+                                   % self.options.change_url
+                comment_line = "[[span(style=color: red, %s\n\n" \
+                                % self.options.comment.replace('\n', '\n> ').\
+                                replace('\n', ')]]\n', 1)
         else:
             change_url_line = "[%s Comment]\n\n" % self.options.change_url
             comment_line = "Comment zu %s\n\n" % self.options.comment
@@ -243,7 +257,8 @@ class TracGerritTicket():
 
     ## handle communication with trac
     def handle_trac(self):
-        if not (os.path.exists(self.trac_env) and os.path.isdir(self.trac_env)):
+        if not (os.path.exists(self.trac_env) and
+                os.path.isdir(self.trac_env)):
             print "trac_env (%s) is not a directory." % self.trac_env
             sys.exit(1)
 
@@ -293,8 +308,9 @@ class TracGerritTicket():
                     now = datetime.now(utc)
 
                     if self.hook_name.endswith('patchset-created'):
-                        if re.search("(close|closed|closes|fix|fixed|fixes) #" + ticket_id,
-                                     self.commit_msg, re.IGNORECASE):
+                        if re.search(
+                                "(close|closed|closes|fix|fixed|fixes) #" + \
+                                ticket_id, self.commit_msg, re.IGNORECASE):
                             ticket['status'] = "testing"
                     elif self.hook_name.endswith('change-merged'):
                             ticket['status'] = "closed"
