@@ -145,12 +145,13 @@ class TracGerritTicket():
 
     def get_built_comment(self, color):
         comment = self.options.comment.split('\n')
+        color_line = "[[span(style=color: %s, %s)]]" % (color, comment[0])
         if len(comment) > 1:
-            comment_line = "[[span(style=color: %s, %s)]]\n%s\n\n" \
-                            % (color, comment[0], '\n>'.join(comment[1:]))
+            comment_line = "%s\n%s\n\n" \
+                            % (color_line, '\n>'.join(comment[1:]))
         else:
-            comment_line = "[[span(style=color: %s, %s)]]\n\n" \
-                            % (color, comment[0])
+            comment_line = "%s\n\n" \
+                            % (color_line)
         return comment_line
 
     def check_for_ticket_reference(self):
