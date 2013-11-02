@@ -143,6 +143,16 @@ class TracGerritTicket():
                       command] + args, stdin=PIPE,
                       stdout=PIPE).communicate(input)[0]
 
+    def get_built_comment(self, color):
+        comment = self.options.comment.split('\n')
+        if len(comment) > 1:
+            comment_line = "[[span(style=color: %s, %s)]]\n%s\n\n" \
+                            % (color, comment[0], '\n>'.join(comment[1:]))
+        else:
+            comment_line = "[[span(style=color: %s, %s)]]\n\n" \
+                            % (color, comment[0])
+        return comment_line
+
     def check_for_ticket_reference(self):
         print "***** running ref-update hook..."
 
@@ -210,21 +220,15 @@ class TracGerritTicket():
             if self.options.review and int(self.options.review) > 0:
                 change_url_line = "[%s Gerrit Review]\n\n" \
                                     % self.options.change_url
-                comment_line = "[[span(style=color: green, %s\n\n" \
-                                % self.options.comment.replace('\n', '\n> ').\
-                                replace('\n', ')]]\n', 1)
+                comment_line = self.get_built_comment(color='green')
             elif not self.options.review:
                 change_url_line = "[%s Gerrit Review]\n\n" \
                                    % self.options.change_url
-                comment_line = "[[span(style=color: blue, %s\n\n" \
-                                % self.options.comment.replace('\n', '\n> ').\
-                                replace('\n', ')]]\n', 1)
+                comment_line = self.get_built_comment(color='blue')
             else:
                 change_url_line = "[%s Gerrit Review]\n\n" \
                                    % self.options.change_url
-                comment_line = "[[span(style=color: red, %s\n\n" \
-                                % self.options.comment.replace('\n', '\n> ').\
-                                replace('\n', ')]]\n', 1)
+                comment_line = self.get_built_comment(color='red')
         else:
             change_url_line = "[%s Comment]\n\n" % self.options.change_url
             comment_line = "Comment zu %s\n\n" % self.options.comment
