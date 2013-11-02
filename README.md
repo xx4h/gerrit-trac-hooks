@@ -27,7 +27,7 @@ have a look at the tags.
 2. `sudo -u gerrit -H git clone https://github.com/xx4h/gerrit-trac-hooks.git hooks`
 3. `cd hooks`
 4. checkout what's the newest tag && `git checkout v0.1b`
-5. edit `config_path` in change-merged, comment-added, patchset-created and ref-update (this will change soon)
+5. **optional:** edit `config_path` in change-merged, comment-added, patchset-created and ref-update (this will change soon)
 6. `sudo -u gerrit -H cp hooks.config.example hooks.config`
 
 now edit **hooks.config** to meet your needs
