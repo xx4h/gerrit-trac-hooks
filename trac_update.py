@@ -94,7 +94,6 @@ class TracGerritHookConfig(RawConfigParser, object):
         '''
         for section in self.get_non_default_sections():
             if self.has_option(section, 'repositories'):
-                print repo
                 if repo in self.get(section,
                                            'repositories').split('\n'):
                     if self.has_option(section, 'trac_env'):
