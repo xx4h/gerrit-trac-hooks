@@ -110,10 +110,12 @@ class TracGerritTicket():
     '''
     '''
 
-    def __init__(self, hook_name, options, config_path, debug=False):
+    def __init__(self, hook_name, options, config_path=None, debug=False):
         '''
         '''
         self.config = TracGerritHookConfig()
+        if not config_path:
+            config_path = os.path.dirname(__file__) + '/hooks.config'
         self.config.read(config_path)
         self.options = options
 

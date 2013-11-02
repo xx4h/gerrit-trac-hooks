@@ -38,10 +38,7 @@ parser.add_option("-n", "--newrev", dest="newrev",
 
 options, args = parser.parse_args()
 
-config_path = '/path/to/your/hooks.config'
-
 trac_update = TracGerritTicket(hook_name=sys.argv[0],
-                               options=options,
-                               config_path=config_path)
+                               options=options)
 trac_update.check_for_ticket_reference()
 

@@ -48,11 +48,8 @@ parser.add_option("--Code-Review", dest="review",
 
 options, args = parser.parse_args()
 
-config_path = '/path/to/your/hooks.config'
-
 # run trac update with hook-name and options
 trac_update = TracGerritTicket(hook_name=sys.argv[0],
-                               options=options,
-                               config_path=config_path)
+                               options=options)
 trac_update.handle_trac()
 
