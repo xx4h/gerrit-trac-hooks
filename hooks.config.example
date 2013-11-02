@@ -29,18 +29,18 @@ trac_env = /var/trac/xxx
 [trac-x]
 trac_env = /var/trac/x
 
-repositories =	internal-repo-one
-		internal-repo-two
+repositories =  internal-repo-one
+                internal-repo-two
 
 [trac-xy]
 trac_env = /var/trac/xy
-repositories =	repo-one
-		repo-two
-		repo-three
-		repo-four
+repositories =  repo-one
+                repo-two
+                repo-three
+                repo-four
 
 [trac-xyz]
 trac_env = /var/trac/xyz
-repositories =	special-repo-one
-		special-repo-two
+repositories =  special-repo-one
+                special-repo-two
 
