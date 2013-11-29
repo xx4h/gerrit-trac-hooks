@@ -38,7 +38,7 @@ parser.add_option("-b", "--branch", dest="branch_name",
 parser.add_option("-t", "--topic", dest="topic",
     help="Gerrit topic of Changeset")
 parser.add_option("-a", "--author", dest="author",
-    help="Gerrit Comment Author")
+    help="Gerrit Comment Author", default=None)
 parser.add_option("-c", "--commit", dest="commit",
     help="GIT Commit SHA ID")
 parser.add_option("-m", "--comment", dest="comment",

@@ -34,7 +34,7 @@ parser.add_option("-p", "--project", dest="project_name",
 parser.add_option("-b", "--branch", dest="branch_name",
     help="Gerrit Branch Name")
 parser.add_option("-l", "--uploader", dest="uploader",
-    help="Gerrit Uploader")
+    help="Gerrit Uploader", default=None)
 parser.add_option("-c", "--commit", dest="commit",
     help="GIT Commit SHA ID")
 parser.add_option("-u", "--change-url", dest="change_url",

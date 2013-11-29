@@ -117,6 +117,7 @@ class TracGerritTicket():
             config_path = os.path.dirname(__file__) + '/hooks.config'
         self.config.read(config_path)
         self.options = options
+        self.options_dict = options.__dict__
 
         self.repo_name = self.options.project_name
 
@@ -278,11 +279,16 @@ class TracGerritTicket():
                                                 self.options.commit])
 
         # get author for trac comment
-        author = self.call_git('rev-list', ['-n',
+        if 'uploader' in self.options_dict and self.options.uploader:
+            author = self.options.uploader
+        elif 'author' in self.options_dict and self.options.author:
+            author = self.options.author
+        else:
+            author = self.call_git('rev-list', ['-n',
                                             '1',
                                             self.options.commit,
                                             '--pretty=format:%an <%ae>']
-                              ).splitlines()[1]
+                                    ).splitlines()[1]
 
         # find ticket numbers referenced in commit message
         ticket_numbers = TICKET_RE.findall(self.commit_msg)
