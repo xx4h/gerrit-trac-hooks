@@ -326,6 +326,7 @@ class TracGerritTicket():
                             ticket['status'] = "testing"
                     elif self.hook_name.endswith('change-merged'):
                             ticket['status'] = "closed"
+                            ticket['resolution'] = "fixed"
 
                     cnum = 0
                     tm = TicketModule(self.env)
