@@ -98,7 +98,7 @@ class TracGerritHookConfig(RawConfigParser, object):
                                            'repositories').split('\n'):
                     if self.has_option(section, 'trac_env'):
                             return self.get(section, 'trac_env')
-        if self.get('hook-settings', 'use_default'):
+        if self.get('hook-settings', 'use_default') == 'True':
             if self.has_section('trac-default'):
                 if self.has_option('trac-default','trac_env'):
                     return self.get('trac-default', 'trac_env')
