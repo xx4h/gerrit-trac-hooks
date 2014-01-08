@@ -264,10 +264,6 @@ class TracGerritTicket():
 
     ## handle communication with trac
     def handle_trac(self):
-        if ('is_draft' in self.options_dict and
-                self.options.is_draft == 'true'):
-            return
-
         if not (os.path.exists(self.trac_env) and
                 os.path.isdir(self.trac_env)):
             print "trac_env (%s) is not a directory." % self.trac_env
