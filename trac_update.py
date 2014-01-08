@@ -232,18 +232,14 @@ class TracGerritTicket():
                                    % self.options.change_url
                 comment_line = self.get_built_comment(color='red')
         else:
+            comment = self.options.comment.split('\n')
             change_url_line = "[%s Comment]\n\n" % self.options.change_url
-            comment_line = "Comment zu %s\n\n" % self.options.comment
-        msg = "Repo: %s\n" \
-              "Branch: %s\n" \
+            comment_line = "Comment zu %s\n\n%s" % (comment[0],
+                                                    '\n>'.join(comment[1:]))
+        msg = "%s" \
               "%s" \
-              "%s" \
-              "Commit: \n%s" \
-              % (self.repo_name,
-                 self.options.branch_name,
-                 change_url_line,
-                 comment_line,
-                 self.commit_msg)
+              % (change_url_line,
+                 comment_line)
         return msg
 
     def trac_new_patchset(self):
