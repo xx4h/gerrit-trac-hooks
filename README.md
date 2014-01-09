@@ -1,7 +1,9 @@
 gerrit-trac-hooks
 ============
+a project by [xx4h Public Projects](https://pp.xx4h.de/) (_sorry_, _i_ _can_ _not_ _afford_ _a_ _trusted_ _cert_)
 
-[![Build Status](http://jenkins.xx4h.de/job/gerrit-trac-hooks/badge/icon)](http://jenkins.xx4h.de/job/gerrit-trac-hooks/)  
+[![Build Status](http://jenkins.xx4h.de/job/gerrit-trac-hooks/badge/icon)](http://jenkins.xx4h.de/job/gerrit-trac-hooks/) (_sorry_, _i_ _can_ _not_ _afford_ _a_ _trusted_ _cert_)  
+
 master maybe doesn't work.
 have a look at the tags.
 
