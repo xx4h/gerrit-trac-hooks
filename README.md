@@ -36,7 +36,9 @@ have a look at the tags.
 now edit **hooks.config** to meet your needs
 
 ## Bugs & Features
-There will be a Trac Instance for this in a few days =)
+[Closed Bugs/Features](https://pp.xx4h.de/report/10)
+[Open Bugs/Features](https://pp.xx4h.de/report/9)
+[Create New Issue/Bug/Feature](https://pp.xx4h.de/newticket)
 
 
 ----------------------------------------------------------------------------
