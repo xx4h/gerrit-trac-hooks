@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 #
 # This is a set of gerrit hooks to interact with trac
-# Copyright (C) 2013  Fabian 'xx4h' Melters
+# Copyright (C) 2014  Fabian 'xx4h' Melters
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
