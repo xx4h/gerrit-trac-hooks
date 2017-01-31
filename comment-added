@@ -45,6 +45,15 @@ parser.add_option("-m", "--comment", dest="comment",
     help="Gerrit Comment")
 parser.add_option("--Code-Review", dest="review",
     help="Gerrit Review", default=None)
+parser.add_option("--change-owner", dest="change_owner",
+    help="Gerrit Change Owner", default=None)
+parser.add_option("--Verified", dest="verified",
+    help="Gerrit Verified", default=None)
+parser.add_option("--Verified-oldValue", dest="verified_oldValue",
+    help="Gerrit Verified OldValue", default=None)
+parser.add_option("--Code-Review-oldValue", dest="review_oldValue",
+    help="Gerrit Review OldValue", default=None)
+
 
 options, args = parser.parse_args()
 

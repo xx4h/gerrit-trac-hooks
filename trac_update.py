@@ -22,18 +22,12 @@
 import re
 import os
 import sys
+import cgi
 
 from optparse import OptionParser
 from ConfigParser import RawConfigParser
 from subprocess import Popen, PIPE, call
 from datetime import datetime
-
-# trac specific imports
-from trac.ticket import Ticket
-from trac.env import open_environment
-from trac.ticket.notification import TicketNotifyEmail
-from trac.ticket.web_ui import TicketModule
-from trac.util.datefmt import utc
 
 
 ## remove substring from end of string
@@ -95,7 +89,7 @@ class TracGerritHookConfig(RawConfigParser, object):
         for section in self.get_non_default_sections():
             if self.has_option(section, 'repositories'):
                 if repo in self.get(section,
-                                           'repositories').split('\n'):
+                        'repositories').split('\n'):
                     if self.has_option(section, 'trac_env'):
                             return self.get(section, 'trac_env')
         if self.get('hook-settings', 'use_default') == 'True':
@@ -103,6 +97,18 @@ class TracGerritHookConfig(RawConfigParser, object):
                 if self.has_option('trac-default','trac_env'):
                     return self.get('trac-default', 'trac_env')
         return None
+
+    def get_section_for_repo(self, repo):
+        '''
+        '''
+        for section in self.get_non_default_sections():
+            if self.has_option(section, 'repositories'):
+                if repo in self.get(section,
+                        'repositories').split('\n'):
+                    return section
+        if self.get('hook-settings', 'use_default') == 'True':
+            if self.has_section('trac-default'):
+                return 'trac-default'
 
 
 class TracGerritTicket():
@@ -121,11 +127,19 @@ class TracGerritTicket():
 
         self.repo_name = self.options.project_name
 
+        self.section = self.config.get_section_for_repo(self.repo_name)
+        if self.config.has_option(self.section, 'comment_always'):
+            self.comment_always = self.config.getboolean(self.section, 'comment_always')
+
         self.trac_env = self.config.get_env_for_repo(self.repo_name)
         if not self.trac_env:
             sys.exit(0)
 
-        self.env = open_environment(self.trac_env)
+	if self.trac_env.startswith("http"):
+            self.trac_over_rpc = True
+        else:
+            self.trac_over_rpc = False
+            self.env = open_environment(self.trac_env)
 
         self.hook_name = hook_name
         self.debug = debug
@@ -148,8 +162,8 @@ class TracGerritTicket():
         comment = self.options.comment.split('\n')
         color_line = "[[span(style=color: %s, %s)]]" % (color, comment[0])
         if len(comment) > 1:
-            comment_line = "%s\n%s\n\n" \
-                            % (color_line, '\n>'.join(comment[1:]))
+            comment_line = "%s\n{{{#!html\n<blockquote class='citation'><p>%s\n\n</p></blockquote>\n}}}" \
+                            % (color_line, cgi.escape('\n'.join(comment[1:])))
         else:
             comment_line = "%s\n\n" \
                             % (color_line)
@@ -219,17 +233,12 @@ class TracGerritTicket():
         '''
         if self.options.review or re.search("Patch Set \d+: -Code-Review\n",
                                             self.options.comment):
+            change_url_line = ""
             if self.options.review and int(self.options.review) > 0:
-                change_url_line = "[%s Gerrit Review]\n\n" \
-                                    % self.options.change_url
                 comment_line = self.get_built_comment(color='green')
             elif not self.options.review:
-                change_url_line = "[%s Gerrit Review]\n\n" \
-                                   % self.options.change_url
                 comment_line = self.get_built_comment(color='blue')
             else:
-                change_url_line = "[%s Gerrit Review]\n\n" \
-                                   % self.options.change_url
                 comment_line = self.get_built_comment(color='red')
         else:
             comment = self.options.comment.split('\n')
@@ -245,15 +254,16 @@ class TracGerritTicket():
     def trac_new_patchset(self):
         '''
         '''
-        msg = "Repo: %s\n" \
-              "Branch: %s\n" \
-              "Patchset Nr.: %s\n" \
-              "[%s Gerrit Patchset]\n\n" \
+        part_one, part_two = self.options.change_url.rsplit('/', 1)
+        correct_change_url = "{0}/c/{1}".format(part_one, part_two)
+        msg = "!Repo/Branch: %s/%s\n" \
+              "[%s/%s Gerrit Patchset %s]\n\n" \
               "%s" \
               % (self.repo_name,
                  self.options.branch_name,
+                 correct_change_url,
                  self.options.patchset,
-                 self.options.change_url,
+                 self.options.patchset,
                  self.commit_msg)
         return msg
 
@@ -264,10 +274,20 @@ class TracGerritTicket():
                 self.options.is_draft == 'true'):
             return
 
-        if not (os.path.exists(self.trac_env) and
-                os.path.isdir(self.trac_env)):
-            print "trac_env (%s) is not a directory." % self.trac_env
-            sys.exit(1)
+	if self.trac_over_rpc:
+            import xmlrpclib
+        else:
+            if not (os.path.exists(self.trac_env) and
+                    os.path.isdir(self.trac_env)):
+                print "trac_env (%s) is not a directory." % self.trac_env
+                sys.exit(1)
+            # trac specific imports
+            from trac.ticket import Ticket
+            from trac.env import open_environment
+            from trac.ticket.notification import TicketNotifyEmail
+            from trac.ticket.web_ui import TicketModule
+            from trac.util.datefmt import utc
+
 
         # should never be used. but why not...
         if len(self.options.commit) == 0:
@@ -302,8 +322,15 @@ class TracGerritTicket():
                 elif self.hook_name.endswith('change-merged'):
                     msg = self.trac_merge_success()
                 elif self.hook_name.endswith('comment-added'):
-                    msg = self.trac_new_review()
-
+                    if self.comment_always:
+                        msg = self.trac_new_review()
+                    else:
+                        if self.options.verified or self.options.review:
+                            if self.options.verified_oldValue == None:
+                                continue
+                            elif self.options.review_oldValue == None:
+                                continue
+                        msg = self.trac_new_review()
 
                 if self.debug:
                     print "you should be able to copy and paste the output " \
@@ -314,34 +341,55 @@ class TracGerritTicket():
                     print "the author of the comment would be: %s"
 
 
-                try:
-                    db = self.env.get_db_cnx()
-                    ticket = Ticket(self.env, ticket_id, db)
-                    now = datetime.now(utc)
+                if self.trac_over_rpc:
+                    try:
+                        server = xmlrpclib.ServerProxy(self.trac_env)
+                        ticket = {}
+                        if self.hook_name.endswith('patchset-created'):
+                            if re.search(
+                                    "(close|closed|closes|fix|fixed|fixes) #" + \
+                                    ticket_id, self.commit_msg, re.IGNORECASE):
+                                ticket['status'] = "testing"
+                        elif self.hook_name.endswith('change-merged'):
+                                ticket['status'] = "closed"
+                                ticket['resolution'] = "fixed"
+                        server.ticket.update(int(ticket_id), msg, ticket,
+                            True, author)
 
-                    if self.hook_name.endswith('patchset-created'):
-                        if re.search(
-                                "(close|closed|closes|fix|fixed|fixes) #" + \
-                                ticket_id, self.commit_msg, re.IGNORECASE):
-                            ticket['status'] = "testing"
-                    elif self.hook_name.endswith('change-merged'):
-                            ticket['status'] = "closed"
-                            ticket['resolution'] = "fixed"
+                    except Exception, e:
+                        sys.stderr.write('Unexpected error while handling Trac ' \
+                                         'ticket ID %s: %s (RPC)' \
+                                         % (ticket_id, e))
+                        
+                else:
+                    try:
+                        db = self.env.get_db_cnx()
+                        ticket = Ticket(self.env, ticket_id, db)
+                        now = datetime.now(utc)
 
-                    cnum = 0
-                    tm = TicketModule(self.env)
-                    for change in tm.grouped_changelog_entries(ticket, db):
-                        if change['permanent']:
-                            cnum += 1
+                        if self.hook_name.endswith('patchset-created'):
+                            if re.search(
+                                    "(close|closed|closes|fix|fixed|fixes) #" + \
+                                    ticket_id, self.commit_msg, re.IGNORECASE):
+                                ticket['status'] = "testing"
+                        elif self.hook_name.endswith('change-merged'):
+                                ticket['status'] = "closed"
+                                ticket['resolution'] = "fixed"
 
-                    ticket.save_changes(author, msg, now, db, str(cnum+1))
-                    db.commit()
+                        cnum = 0
+                        tm = TicketModule(self.env)
+                        for change in tm.grouped_changelog_entries(ticket, db):
+                            if change['permanent']:
+                                cnum += 1
 
-                    tn = TicketNotifyEmail(self.env)
-                    tn.notify(ticket, newticket=0, modtime=now)
+                        ticket.save_changes(author, msg, now, db, str(cnum+1))
+                        db.commit()
 
-                except Exception, e:
-                    sys.stderr.write('Unexpected error while handling Trac ' \
-                                     'ticket ID %s: %s' \
-                                     % (ticket_id, e))
+                        tn = TicketNotifyEmail(self.env)
+                        tn.notify(ticket, newticket=0, modtime=now)
+
+                    except Exception, e:
+                        sys.stderr.write('Unexpected error while handling Trac ' \
+                                         'ticket ID %s: %s (MODULE)' \
+                                         % (ticket_id, e))
 

@@ -39,6 +39,10 @@ parser.add_option("-s", "--submitter", dest="submitter",
     help="Gerrit Patchset id")
 parser.add_option("-c", "--commit", dest="commit",
     help="GIT Commit SHA ID")
+parser.add_option("--change-owner", dest="change_owner",
+    help="Gerrit Change Owner")
+parser.add_option("--newrev", dest="new_rev",
+    help="Gerrit New Rev")
 
 options, args = parser.parse_args()
 

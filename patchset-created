@@ -43,6 +43,10 @@ parser.add_option("-t", "--topic", dest="topic",
     help="Gerrit topic of Changeset")
 parser.add_option("-e", "--patchset", dest="patchset",
     help="Gerrit Patchset id")
+parser.add_option("-k", "--kind", dest="kind",
+    help="Gerrit Change Kind")
+parser.add_option("--change-owner", dest="change_owner",
+    help="Gerrit Change Owner")
 
 options, args = parser.parse_args()
 
