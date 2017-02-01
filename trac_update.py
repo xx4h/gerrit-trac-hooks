@@ -23,12 +23,15 @@ import re
 import os
 import sys
 import cgi
+import magic
 
 from optparse import OptionParser
 from ConfigParser import RawConfigParser
 from subprocess import Popen, PIPE, call
 from datetime import datetime
 
+## regex to find #TICKETNUMBER
+TICKET_RE = re.compile('#([0-9]+)')
 
 ## remove substring from end of string
 # thanks to http://stackoverflow.com/a/3663505/1922402
@@ -38,14 +41,76 @@ def rchop(thestring, ending):
     return thestring
 
 
-## regex to find #TICKETNUMBER
-TICKET_RE = re.compile('#([0-9]+)')
+## execute git commands via Popen via call_git
+def call_git(command, args, input=None):
+    return Popen([TracGerritHookConfig().get('hook-settings', 'git_path'),
+                  command] + args, stdin=PIPE,
+                  stdout=PIPE).communicate(input)[0]
+
+
+def call_pep(args=None):
+    command_list = [TracGerritHookConfig().get('hook-settings', 'pep_path'),
+                '--format="Line %(row)s (%(code)s): %(text)s"']
+    if args:
+        command_list.append(args)
+    command_list.append('-')
+    return Popen(command_list, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+
+def is_python(filename, code=None):
+    if filename.endswith('.py'):
+        return True
+    elif filename.endswith('.pyc'):
+        return False
+    is_py = re.compile('(^|.*[\s/])python .*', re.IGNORECASE)
+    ms = magic.open(magic.MAGIC_NONE)
+    ms.load()
+    return is_py.match(ms.buffer(code))
+
+
+def check_pep_eight(filename, commit):
+    """
+    This functions receives a path to a file and checks the file
+    type. If the file is a python file the function checks if the old
+    version already was pep8, if this is true, it will be checked to
+    match pep8
+    """
+    file_list = call_git('ls-tree', ['-r', commit + '^'])
+    file_is_python = False
+    files = []
+    for line in file_list.splitlines():
+        files.append(line.split()[-1:][0])
+    if filename in files:
+        orig_file = call_git('show', [commit + '^:' + filename])
+        if is_python(filename, orig_file):
+            file_is_python = True
+            pep_call = call_pep()
+            ret = pep_call.communicate(input=orig_file)[0]
+            del orig_file
+        else:
+            del orig_file
+            return (True, {filename: ['not a python file']})
+    else:
+        ret = ''
+
+    # if ret is empty, it means that the old version had no pep8 errors
+    # in this case we check the new version as well
+    if not ret:
+        commit_file = call_git('show', [commit + ':' + filename])
+        if file_is_python or is_python(filename, commit_file):
+            pep_call = call_pep()
+            ret = pep_call.communicate(input=commit_file)[0]
+            if ret:
+                return (False, {filename: ret.splitlines()})
+        else:
+            return (True, {filename: ['not a python file']})
+    return (True, {filename: ['PEP8-Check passed']})
 
 
 class TracGerritHookConfig(RawConfigParser, object):
     '''
     '''
-    def __init__(self):
+    def __init__(self, config_path=os.path.dirname(__file__) + '/hooks.config'):
         '''
         '''
         super(TracGerritHookConfig, self).__init__()
@@ -54,6 +119,7 @@ class TracGerritHookConfig(RawConfigParser, object):
 
         # var init non default sections
         self.non_default_sections = []
+        self.read(config_path)
 
     def set_defaults(self):
         '''
@@ -67,6 +133,8 @@ class TracGerritHookConfig(RawConfigParser, object):
                     self.set(section, 'use_default', True)
                 if not self.has_option(section, 'git_path'):
                     self.set(section, 'git_path', '/usr/bin/git')
+                if not self.has_option(section, 'pep_path'):
+                    self.set(section, 'pep_path', '/usr/bin/pep8')
                 if not self.has_option(section, 'python_egg_cache'):
                     self.set(section, 'python_egg_cache',
                                     '/var/trac/.egg-cache')
@@ -110,6 +178,14 @@ class TracGerritHookConfig(RawConfigParser, object):
             if self.has_section('trac-default'):
                 return 'trac-default'
 
+    def get_option_for_repo(self, repo_name, option):
+        '''
+        '''
+        section = self.get_section_for_repo(repo_name)
+        if self.has_option(section, option):
+            return self.get(section, option)
+        return None
+
 
 class TracGerritTicket():
     '''
@@ -118,10 +194,9 @@ class TracGerritTicket():
     def __init__(self, hook_name, options, config_path=None, debug=False):
         '''
         '''
-        self.config = TracGerritHookConfig()
         if not config_path:
             config_path = os.path.dirname(__file__) + '/hooks.config'
-        self.config.read(config_path)
+        self.config = TracGerritHookConfig(config_path)
         self.options = options
         self.options_dict = options.__dict__
 
@@ -152,11 +227,6 @@ class TracGerritTicket():
                                                 get('hook-settings',
                                                     'python_egg_cache')
 
-    ## execute git commands via Popen via call_git
-    def call_git(self, command, args, input=None):
-        return Popen([self.config.get('hook-settings', 'git_path'),
-                      command] + args, stdin=PIPE,
-                      stdout=PIPE).communicate(input)[0]
 
     def get_built_comment(self, color):
         comment = self.options.comment.split('\n')
@@ -169,55 +239,98 @@ class TracGerritTicket():
                             % (color_line)
         return comment_line
 
-    def check_for_ticket_reference(self):
+    def check_commit(self):
         print "***** running ref-update hook..."
-
         commit = self.options.newrev
-        ## check if root wants to commit
-        name = self.call_git('show',['--format=%cn','-s',commit])
-        if re.search("root", name, re.IGNORECASE):
-            print "you are commiting as root - that is not allowed"
-            sys.exit(1)
-        ## if message references to a ticket it is ok
-        message = self.call_git('show',['--format=%s%n%b','--summary',commit])
-        if not re.search("(close|closed|closes|fix|fixed|fixes|references \
-                         |refs|addresses|re|see) #[0-9]+",
-                         message,re.IGNORECASE):
-            if not re.search("(#noref|#release)",message,re.IGNORECASE):
-                print """
-                you need to reference a trac ticket number
-                    command #1
-                    command #1, #2
-                    command #1 & #2
-                    command #1 and #2
-                You can have more than one command in a message.
-                The following commands are supported. There is
-                more than one spelling for each command, to make
-                this as user-friendly as possible.
-
-                close, closed, closes, fix, fixed, fixes
-                    The specified issue numbers are set to testing
-                    with the contents of this commit message being
-                    added to it.
-                references, refs, addresses, re, see
-                    The specified issue numbers are left in their
-                    current status, but the contents of this commit
-                    message are added to their notes.
-
-                A fairly complicated example of what you can do is
-                with a commit message of:
-                    Changed blah and foo to do this or that. Fixes #10
-                    and #12, and refs #12.
-
-                This will close #10 and #12, and add a note to #12.\n"""
+        disable_ticketref = self.config.get_option_for_repo(
+            self.options.project_name, 'disable_ticketref')
+        if self.options.project_name in disable_ticketref:
+            print("{0} does not need to reference a "
+                "trac ticket number".format(self.options.project_name))
+        else:
+            ## check if root wants to commit
+            name = call_git('show',['--format=%cn','-s',commit])
+            if re.search("root", name, re.IGNORECASE):
+                print "you are commiting as root - that is not allowed"
                 sys.exit(1)
+            ## if message references to a ticket it is ok
+            message = call_git('show',['--format=%s%n%b','--summary',commit])
+            if not re.search("(close|closed|closes|fix|fixed|fixes|references \
+                             |refs|addresses|re|see) #[0-9]+",
+                             message,re.IGNORECASE):
+                if not re.search("(#noref|#release)",message,re.IGNORECASE):
+                    print """
+                    you need to reference a trac ticket number
+                        command #1
+                        command #1, #2
+                        command #1 & #2
+                        command #1 and #2
+                    You can have more than one command in a message.
+                    The following commands are supported. There is
+                    more than one spelling for each command, to make
+                    this as user-friendly as possible.
+
+                    close, closed, closes, fix, fixed, fixes
+                        The specified issue numbers are set to testing
+                        with the contents of this commit message being
+                        added to it.
+                    references, refs, addresses, re, see
+                        The specified issue numbers are left in their
+                        current status, but the contents of this commit
+                        message are added to their notes.
+
+                    A fairly complicated example of what you can do is
+                    with a commit message of:
+                        Changed blah and foo to do this or that. Fixes #10
+                        and #12, and refs #12.
+
+                    This will close #10 and #12, and add a note to #12.\n"""
+                    print "***** running ref-update hook... [ticketref failed]"
+                    sys.exit(1)
+
+        disable_pepcheck = self.config.get_option_for_repo(
+            self.options.project_name, 'disable_pepcheck')
+        if self.options.project_name in disable_pepcheck:
+            print("{0} is disabled for pepcheck".format(
+                self.options.project_name))
+        else:
+            # if more than one parent it is a merge and we ignore merges
+            # in that case
+            parents = call_git('cat-file', ['-p', commit]).splitlines()
+            if (len(filter(lambda x: 'parent' in x, parents)) <= 1):
+                files = call_git('diff', ['--name-only', commit + '^',
+                    commit]).splitlines()
+                pep_eight_check_success = True
+                pep_dict_all = {}
+                for filename in files:
+                    if len(files) > 1 and re.search("debian/changelog", filename):
+                        print("changelog ({0}) has to be a separate commit: {1}"
+                              .format(filename, commit))
+                        sys.exit(1)
+                    good, pep_dict = check_pep_eight(filename, commit)
+                    if not good:
+                        pep_eight_check_success = False
+                        pep_dict_all.update(pep_dict)
+                    elif self.debug:
+                        pep_dict_all.update(pep_dict)
+                if not pep_eight_check_success:
+                    print("PEP8 Errors found:\n=============================")
+                    for filename in pep_dict_all.keys():
+                        print("In '%s':" % filename)
+                        for message in pep_dict_all[filename]:
+                            print("-> %s" % message)
+                    print("\nFor more information (all Files) run:")
+                    print("    pep8 --repeat --statistics --show-source "
+                            "--show-pep8 .")
+                    print "***** running ref-update hook... [pep8 failed]"
+                    sys.exit(1)
         print "***** running ref-update hook... [done]"
+
 
     def trac_merge_success(self):
         '''
         '''
-        msg = "Repo: %s\n" \
-              "Branch: %s\n" \
+        msg = "!Repo/Branch: %s/%s\n" \
               "[%s Gerrit Patchset merged]\n\n" \
               "%s\n\n" \
               "merged by %s" \
@@ -294,7 +407,7 @@ class TracGerritTicket():
             return
 
         # get actual commit and extract ticket number(s)
-        self.commit_msg = self.call_git('show',['--format=%s%n%b',
+        self.commit_msg = call_git('show',['--format=%s%n%b',
                                                 '--summary',
                                                 self.options.commit])
 
@@ -304,7 +417,7 @@ class TracGerritTicket():
         elif 'author' in self.options_dict and self.options.author:
             author = self.options.author
         else:
-            author = self.call_git('rev-list', ['-n',
+            author = call_git('rev-list', ['-n',
                                             '1',
                                             self.options.commit,
                                             '--pretty=format:%an <%ae>']

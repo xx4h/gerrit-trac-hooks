@@ -40,5 +40,5 @@ options, args = parser.parse_args()
 
 trac_update = TracGerritTicket(hook_name=sys.argv[0],
                                options=options)
-trac_update.check_for_ticket_reference()
+trac_update.check_commit()
 
